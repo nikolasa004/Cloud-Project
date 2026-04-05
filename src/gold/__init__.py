@@ -1,0 +1,1 @@
+"""Gold-layer modules for metric and KPI generation."""
