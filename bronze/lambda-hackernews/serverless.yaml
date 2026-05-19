@@ -1,0 +1,48 @@
+service: bronze-hackernews
+
+frameworkVersion: '3'
+configValidationMode: error
+
+plugins:
+  - serverless-python-requirements
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: eu-central-1
+  stage: dev
+  architecture: x86_64
+  timeout: 120
+  memorySize: 512
+  environment:
+    BUCKET_NAME: ftn-social-data-pipeline-2026
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/hackernews/*
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+
+package:
+  individually: true
+  patterns:
+    - '!**'
+    - 'src/**'
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+    slim: true
+
+functions:
+  bronzeHackerNews:
+    name: bronze-hackernews-ingestion
+    handler: src.handler.lambda_handler

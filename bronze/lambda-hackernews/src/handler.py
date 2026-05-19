@@ -84,8 +84,3 @@ def lambda_handler(event, context):
         "s3_key": object_key,
         "summary": summary,
     }
-
-
-if __name__ == "__main__":
-    result = lambda_handler({}, None)
-    print(json.dumps(result, indent=2))

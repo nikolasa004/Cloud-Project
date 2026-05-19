@@ -10,7 +10,6 @@ No transformation or normalization should be performed here.
 The bronze layer must preserve the original form of the source data.
 """
 
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set
@@ -24,10 +23,7 @@ ALGOLIA_SEARCH_URL = "https://hn.algolia.com/api/v1/search_by_date"
 REQUEST_TIMEOUT_SECONDS = 10
 MAX_WORKERS = 20
 
-# Raw HN API item types that we want in bronze
 ALLOWED_TYPES = {"story", "comment", "job", "poll"}
-
-# Algolia tags we will search for
 ALGOLIA_TAGS = ["story", "comment", "job", "poll", "ask_hn"]
 
 
@@ -140,15 +136,3 @@ def collect_previous_day_hn_items(reference_dt: Optional[datetime] = None) -> Di
         "collected_count": len(raw_items),
         "items": raw_items,
     }
-
-
-if __name__ == "__main__":
-    result = collect_previous_day_hn_items()
-    print(json.dumps(
-        {
-            "source": result["source"],
-            "date": result["date"],
-            "collected_count": result["collected_count"],
-        },
-        indent=2
-    ))
