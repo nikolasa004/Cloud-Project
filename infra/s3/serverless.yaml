@@ -1,0 +1,12 @@
+service: infra-s3
+
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  region: eu-central-1
+  stage: dev
+
+resources:
+  - ${file(./data-lake.yaml)}
