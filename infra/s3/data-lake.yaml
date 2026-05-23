@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Shared S3 data lake bucket for the project
+Description: Shared S3 data lake and staging buckets for the project
 
 Resources:
   DataLakeBucket:
@@ -20,8 +20,27 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+  StagingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ftn-social-staging-2026
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
 
 Outputs:
   DataLakeBucketName:
     Description: Name of the shared S3 data lake bucket
     Value: !Ref DataLakeBucket
+  StagingBucketName:
+    Description: Name of the staging bucket for raw external datasets
+    Value: !Ref StagingBucket
