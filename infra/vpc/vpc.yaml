@@ -98,7 +98,7 @@ Resources:
     Properties:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      InternetGatewayId: !Ref InternetGateway
+      GatewayId: !Ref InternetGateway
 
   PrivateRouteTable:
     Type: AWS::EC2::RouteTable
@@ -158,19 +158,19 @@ Resources:
           Value: ftn-lambda-sg
 
 Outputs:
-  VpcId:
+  VpcIdOutput:
     Value: !Ref VPC
     Export:
       Name: !Sub "${AWS::StackName}-VpcId"
-  SecurityGroupId:
+  LambdaSecurityGroupIdOutput:
     Value: !GetAtt LambdaSecurityGroup.GroupId
     Export:
       Name: !Sub "${AWS::StackName}-LambdaSecurityGroupId"
-  PrivateSubnetA:
+  PrivateSubnetAOutput:
     Value: !Ref PrivateSubnetA
     Export:
       Name: !Sub "${AWS::StackName}-PrivateSubnetA"
-  PrivateSubnetB:
+  PrivateSubnetBOutput:
     Value: !Ref PrivateSubnetB
     Export:
       Name: !Sub "${AWS::StackName}-PrivateSubnetB"
