@@ -1,0 +1,12 @@
+service: infra-vpc
+
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  region: eu-central-1
+  stage: dev
+
+resources:
+  - ${file(./vpc.yaml)}

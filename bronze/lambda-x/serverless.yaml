@@ -34,6 +34,13 @@ provider:
             - logs:CreateLogStream
             - logs:PutLogEvents
           Resource: "*"
+          
+  vpc:
+    securityGroupIds:
+      - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
+    subnetIds:
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"        
 
 package:
   individually: true
@@ -45,3 +52,9 @@ functions:
   bronzeX:
     name: bronze-x-ingestion
     handler: src.handler.lambda_handler
+    events:
+      - schedule:
+          name: daily-x-ingestion-trigger
+          description: "Automatically triggers X data ingestion every day at 01:00 UTC"
+          rate: cron(0 1 * * ? *) # Runs at 01:00 AM UTC every day
+          enabled: true
