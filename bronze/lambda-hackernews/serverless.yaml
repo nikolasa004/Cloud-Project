@@ -30,7 +30,12 @@ provider:
             - logs:CreateLogStream
             - logs:PutLogEvents
           Resource: "*"
-
+  vpc:
+    securityGroupIds:
+      - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
+    subnetIds:
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
 package:
   individually: true
   patterns:
