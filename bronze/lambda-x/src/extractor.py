@@ -1,6 +1,6 @@
 """
-Ekstraktor podataka sa X (Twitter) mreže iz Staging S3 bucketa.
-Odvaja logiku čitanja i filtriranja od AWS Lambda handlera.
+Data extractor for X (Twitter) networks from Staging S3 bucket.
+Separates reading and filtering logic from AWS Lambda handler.
 """
 import csv
 import io
@@ -10,7 +10,7 @@ s3_client = boto3.client("s3")
 
 def extract_x_data_for_date(staging_bucket: str, file_key: str, target_date: str) -> tuple[str, int]:
     """
-    Preuzima CSV iz Staging bucketa, filtrira ga po datumu i vraća filtrirani CSV string.
+    Extracts CSV from Staging bucket, filters it by date and returns the filtered string.
     """
 
     response = s3_client.get_object(Bucket=staging_bucket, Key=file_key)
