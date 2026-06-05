@@ -3,6 +3,9 @@ service: silver-hn-users-normalizer
 frameworkVersion: '3'
 configValidationMode: error
 
+plugins:
+  - serverless-python-requirements
+
 provider:
   name: aws
   runtime: python3.11
@@ -10,13 +13,45 @@ provider:
   stage: dev
   architecture: x86_64
   timeout: 120
-  memorySize: 512
+  memorySize: 1024
+  environment:
+    DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/hackernews/*
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/silver/users/*
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026
+  vpc:
+    securityGroupIds:
+      - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
+    subnetIds:
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
 
 package:
   individually: true
   patterns:
     - '!**'
     - 'src/**'
+    - '../shared/**'
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+    slim: true
 
 functions:
   hnUsersNormalizer:
