@@ -1,0 +1,68 @@
+service: silver-normalization-workflow
+
+frameworkVersion: '3'
+configValidationMode: error
+
+plugins:
+  - serverless-step-functions
+
+provider:
+  name: aws
+  region: eu-central-1
+  stage: dev
+
+stepFunctions:
+  stateMachines:
+    silverNormalizationWorkflow:
+      name: silver-normalization-workflow
+      definition:
+        Comment: "Silver layer normalization workflow"
+        StartAt: ValidateBronzeInputs
+        States:
+          ValidateBronzeInputs:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ValidateBronzeInputsLambdaFunction, Arn]
+            Next: ParallelNormalize
+
+          ParallelNormalize:
+            Type: Parallel
+            Branches:
+              - StartAt: NormalizeHnPosts
+                States:
+                  NormalizeHnPosts:
+                    Type: Task
+                    Resource:
+                      Fn::GetAtt: [HnPostsNormalizerLambdaFunction, Arn]
+                    End: true
+
+              - StartAt: NormalizeHnUsers
+                States:
+                  NormalizeHnUsers:
+                    Type: Task
+                    Resource:
+                      Fn::GetAtt: [HnUsersNormalizerLambdaFunction, Arn]
+                    End: true
+
+              - StartAt: NormalizeXPosts
+                States:
+                  NormalizeXPosts:
+                    Type: Task
+                    Resource:
+                      Fn::GetAtt: [XPostsNormalizerLambdaFunction, Arn]
+                    End: true
+
+              - StartAt: NormalizeXUsers
+                States:
+                  NormalizeXUsers:
+                    Type: Task
+                    Resource:
+                      Fn::GetAtt: [XUsersNormalizerLambdaFunction, Arn]
+                    End: true
+            Next: QualityChecks
+
+          QualityChecks:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [QualityChecksLambdaFunction, Arn]
+            End: true

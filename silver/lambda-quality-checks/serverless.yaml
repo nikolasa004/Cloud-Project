@@ -1,0 +1,24 @@
+service: silver-quality-checks
+
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: eu-central-1
+  stage: dev
+  architecture: x86_64
+  timeout: 60
+  memorySize: 256
+
+package:
+  individually: true
+  patterns:
+    - '!**'
+    - 'src/**'
+
+functions:
+  qualityChecks:
+    name: silver-quality-checks
+    handler: src.handler.lambda_handler

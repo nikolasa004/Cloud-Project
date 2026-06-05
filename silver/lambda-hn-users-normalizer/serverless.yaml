@@ -1,0 +1,24 @@
+service: silver-hn-users-normalizer
+
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: eu-central-1
+  stage: dev
+  architecture: x86_64
+  timeout: 120
+  memorySize: 512
+
+package:
+  individually: true
+  patterns:
+    - '!**'
+    - 'src/**'
+
+functions:
+  hnUsersNormalizer:
+    name: silver-hn-users-normalizer
+    handler: src.handler.lambda_handler
