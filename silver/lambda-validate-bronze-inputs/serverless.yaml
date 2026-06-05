@@ -22,6 +22,12 @@ provider:
           Resource:
             - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/hackernews/*
             - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/x/*
+  vpc:
+  securityGroupIds:
+    - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
+  subnetIds:
+    - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
+    - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
 
 package:
   individually: true
