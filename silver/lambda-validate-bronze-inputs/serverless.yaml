@@ -11,6 +11,17 @@ provider:
   architecture: x86_64
   timeout: 60
   memorySize: 256
+  environment:
+    DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:HeadObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/hackernews/*
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/x/*
 
 package:
   individually: true

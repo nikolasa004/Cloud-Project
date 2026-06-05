@@ -21,8 +21,7 @@ stepFunctions:
         States:
           ValidateBronzeInputs:
             Type: Task
-            Resource:
-              Fn::GetAtt: [ValidateBronzeInputsLambdaFunction, Arn]
+            Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-validate-bronze-inputs
             Next: ParallelNormalize
 
           ParallelNormalize:
@@ -32,37 +31,33 @@ stepFunctions:
                 States:
                   NormalizeHnPosts:
                     Type: Task
-                    Resource:
-                      Fn::GetAtt: [HnPostsNormalizerLambdaFunction, Arn]
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-hn-posts-normalizer
                     End: true
 
               - StartAt: NormalizeHnUsers
                 States:
                   NormalizeHnUsers:
                     Type: Task
-                    Resource:
-                      Fn::GetAtt: [HnUsersNormalizerLambdaFunction, Arn]
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-hn-users-normalizer
                     End: true
 
               - StartAt: NormalizeXPosts
                 States:
                   NormalizeXPosts:
                     Type: Task
-                    Resource:
-                      Fn::GetAtt: [XPostsNormalizerLambdaFunction, Arn]
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-x-posts-normalizer
                     End: true
 
               - StartAt: NormalizeXUsers
                 States:
                   NormalizeXUsers:
                     Type: Task
-                    Resource:
-                      Fn::GetAtt: [XUsersNormalizerLambdaFunction, Arn]
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-x-users-normalizer
                     End: true
+
             Next: QualityChecks
 
           QualityChecks:
             Type: Task
-            Resource:
-              Fn::GetAtt: [QualityChecksLambdaFunction, Arn]
+            Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-quality-checks
             End: true
