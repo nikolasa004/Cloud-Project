@@ -1,15 +1,36 @@
 """
 Silver Hacker News posts normalizer entry point.
-
-This Lambda should:
-- read Bronze Hacker News raw data from S3
-- normalize raw items into the shared silver posts schema
-- write the result to Silver S3 as partitioned parquet
 """
 
-def lambda_handler(event, context):
+from __future__ import annotations
+
+from typing import Any, Dict
+
+from src.reader import read_hn_bronze_payload
+from src.transformer import transform_hn_posts
+from src.writer import write_posts_parquet
+
+
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    event = event or {}
+
+    bucket_name = event["bucket_name"]
+    hn_bronze_key = event["hn_bronze_key"]
+    target_date = event["target_date"]
+
+    bronze_payload = read_hn_bronze_payload(bucket_name=bucket_name, object_key=hn_bronze_key)
+    silver_df = transform_hn_posts(bronze_payload)
+    output_path = write_posts_parquet(
+        df=silver_df,
+        bucket_name=bucket_name,
+        target_date=target_date,
+    )
+
     return {
-        "status": "NOT_IMPLEMENTED",
-        "message": "HN posts normalizer is not implemented yet.",
-        "input": event,
+        "status": "OK",
+        "step": "silver-hn-posts-normalizer",
+        "target_date": target_date,
+        "input_rows": len(bronze_payload.get("items", [])),
+        "output_rows": len(silver_df),
+        "output_path": output_path,
     }
