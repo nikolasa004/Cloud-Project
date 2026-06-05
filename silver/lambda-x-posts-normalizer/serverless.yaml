@@ -3,6 +3,9 @@ service: silver-x-posts-normalizer
 frameworkVersion: '3'
 configValidationMode: error
 
+plugins:
+  - serverless-python-requirements
+
 provider:
   name: aws
   runtime: python3.11
@@ -10,13 +13,39 @@ provider:
   stage: dev
   architecture: x86_64
   timeout: 120
-  memorySize: 512
+  memorySize: 1024
+  environment:
+    DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/x/*
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/silver/posts/*
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026
 
 package:
   individually: true
   patterns:
     - '!**'
     - 'src/**'
+    - '../shared/**'
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+    slim: true
 
 functions:
   xPostsNormalizer:
