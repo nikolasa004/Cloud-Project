@@ -3,9 +3,6 @@ service: silver-quality-checks
 frameworkVersion: '3'
 configValidationMode: error
 
-plugins:
-  - serverless-python-requirements
-
 provider:
   name: aws
   runtime: python3.11
@@ -14,6 +11,8 @@ provider:
   architecture: x86_64
   timeout: 120
   memorySize: 1024
+  layers:
+    - arn:aws:lambda:eu-central-1:336392948345:layer:AWSSDKPandas-Python311:19
   environment:
     DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
   iam:
@@ -40,11 +39,6 @@ package:
     - '!**'
     - 'src/**'
     - '../shared/**'
-
-custom:
-  pythonRequirements:
-    dockerizePip: false
-    slim: true
 
 functions:
   qualityChecks:
