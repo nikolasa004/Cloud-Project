@@ -3,9 +3,6 @@ service: silver-x-posts-normalizer
 frameworkVersion: '3'
 configValidationMode: error
 
-plugins:
-  - serverless-python-requirements
-
 provider:
   name: aws
   runtime: python3.11
@@ -14,6 +11,8 @@ provider:
   architecture: x86_64
   timeout: 120
   memorySize: 1024
+  layers:
+    - arn:aws:lambda:eu-central-1:336392948345:layer:AWSSDKPandas-Python311:19
   environment:
     DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
   iam:
@@ -35,11 +34,11 @@ provider:
           Resource:
             - arn:aws:s3:::ftn-social-data-pipeline-2026
   vpc:
-  securityGroupIds:
-    - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
-  subnetIds:
-    - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
-    - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
+    securityGroupIds:
+      - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
+    subnetIds:
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
 
 package:
   individually: true
@@ -47,11 +46,6 @@ package:
     - '!**'
     - 'src/**'
     - '../shared/**'
-
-custom:
-  pythonRequirements:
-    dockerizePip: false
-    slim: true
 
 functions:
   xPostsNormalizer:
