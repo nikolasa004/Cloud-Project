@@ -51,9 +51,3 @@ functions:
   bronzeHackerNews:
     name: bronze-hackernews-ingestion
     handler: src.handler.lambda_handler
-    events:
-      - schedule:
-          name: daily-hackernews-ingestion-trigger
-          description: "Automatically triggers Hacker News data ingestion every day at 01:00 UTC"
-          rate: cron(0 1 * * ? *) # Runs at 01:00 AM UTC every day
-          enabled: true
