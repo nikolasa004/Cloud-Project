@@ -85,6 +85,7 @@ stepFunctions:
                         MaxAttempts: 2
                         BackoffRate: 2.0
 
+            ResultPath: $.normalization_results
             Next: QualityChecks
             Catch:
               - ErrorEquals:
