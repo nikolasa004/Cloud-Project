@@ -4,6 +4,7 @@ Validate bronze inputs for the silver normalization workflow.
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any, Dict
 
@@ -23,8 +24,12 @@ def s3_object_exists(bucket: str, key: str) -> bool:
         return False
 
 
-def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    event = event or {}
+def lambda_handler(event: Dict[str, Any] | str, context: Any) -> Dict[str, Any]:
+    if event is None:
+        event = {}
+
+    if isinstance(event, str):
+        event = json.loads(event)
 
     bucket_name = event.get("bucket_name", DATA_LAKE_BUCKET)
 

@@ -18,16 +18,21 @@ provider:
       statements:
         - Effect: Allow
           Action:
-            - s3:HeadObject
+            - s3:GetObject
           Resource:
             - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/hackernews/*
             - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/x/*
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026
   vpc:
-  securityGroupIds:
-    - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
-  subnetIds:
-    - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
-    - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
+    securityGroupIds:
+      - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
+    subnetIds:
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
 
 package:
   individually: true

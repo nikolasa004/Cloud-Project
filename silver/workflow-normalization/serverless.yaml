@@ -23,6 +23,12 @@ stepFunctions:
             Type: Task
             Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-validate-bronze-inputs
             Next: ParallelNormalize
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 2
+                MaxAttempts: 2
+                BackoffRate: 2.0
 
           ParallelNormalize:
             Type: Parallel
@@ -33,6 +39,12 @@ stepFunctions:
                     Type: Task
                     Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-hn-posts-normalizer
                     End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
 
               - StartAt: NormalizeHnUsers
                 States:
@@ -40,6 +52,12 @@ stepFunctions:
                     Type: Task
                     Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-hn-users-normalizer
                     End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
 
               - StartAt: NormalizeXPosts
                 States:
@@ -47,6 +65,12 @@ stepFunctions:
                     Type: Task
                     Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-x-posts-normalizer
                     End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
 
               - StartAt: NormalizeXUsers
                 States:
@@ -54,10 +78,38 @@ stepFunctions:
                     Type: Task
                     Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-x-users-normalizer
                     End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
 
             Next: QualityChecks
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: WorkflowFailed
 
           QualityChecks:
             Type: Task
             Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-quality-checks
-            End: true
+            Next: WorkflowSucceeded
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 2
+                MaxAttempts: 2
+                BackoffRate: 2.0
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: WorkflowFailed
+
+          WorkflowSucceeded:
+            Type: Succeed
+
+          WorkflowFailed:
+            Type: Fail
+            Error: SilverNormalizationFailed
+            Cause: Silver normalization workflow failed.
