@@ -1,0 +1,53 @@
+service: gold-top-authors
+
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: eu-central-1
+  stage: dev
+  architecture: x86_64
+  timeout: 120
+  memorySize: 1024
+  layers:
+    - arn:aws:lambda:eu-central-1:336392948345:layer:AWSSDKPandas-Python311:19
+  environment:
+    DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/silver/users/*
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:DeleteObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/gold/top_authors_metric/*
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026
+  vpc:
+    securityGroupIds:
+      - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
+    subnetIds:
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
+      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
+
+package:
+  individually: true
+  patterns:
+    - '!**'
+    - 'src/**'
+
+functions:
+  calculateTopAuthors:
+    name: gold-top-authors
+    handler: src.handler.lambda_handler
