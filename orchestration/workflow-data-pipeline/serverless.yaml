@@ -88,6 +88,23 @@ stepFunctions:
                 hn_date.$: $.hn_date
                 x_bronze_key.$: $.x_bronze_key
                 x_date.$: $.x_date
+            ResultPath: $.silver_results
+            Next: RunGoldWorkflow
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: WorkflowFailed
+
+          RunGoldWorkflow:
+            Type: Task
+            Resource: arn:aws:states:::states:startExecution.sync:2
+            Parameters:
+              StateMachineArn: arn:aws:states:eu-central-1:${aws:accountId}:stateMachine:gold-transformation-workflow
+              Input:
+                bucket_name.$: $.bucket_name
+                hn_date.$: $.hn_date
+                x_date.$: $.x_date
+            ResultPath: $.gold_results
             Next: WorkflowSucceeded
             Catch:
               - ErrorEquals:
