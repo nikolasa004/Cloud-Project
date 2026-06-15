@@ -4,8 +4,10 @@ from typing import List, Dict, Any
 
 import pandas as pd
 
+POSTS_REQUIRED_COLUMNS = ["post_id", "author_username","platform", "created_at", "post_type"]
+USERS_REQUIRED_COLUMNS = ["username", "user_id", "platform"]
 
-def _calculate_score(df: pd.DataFrame, target_date: str) -> float:
+def _calculate_score(df: pd.DataFrame, target_date:str, required_columns: List[str]) -> float:
     if df.empty:
         return 100.0
 
@@ -16,8 +18,10 @@ def _calculate_score(df: pd.DataFrame, target_date: str) -> float:
         return 100.0
 
     total_rows = len(daily_df)
-    valid_rows = len(daily_df.dropna())
+    existing_required_cols = [col for col in required_columns if col in daily_df.columns]
     
+    valid_rows = len(daily_df.dropna(subset=existing_required_cols))
+
     score = (valid_rows / total_rows) * 100
     return round(score, 2)
 
@@ -35,25 +39,25 @@ def calculate_quality_kpi(
             "date": hn_date,
             "platform": "HackerNews",
             "dataset": "posts",
-            "quality_score_percent": _calculate_score(hn_posts, hn_date)
+            "quality_score_percent": _calculate_score(hn_posts, hn_date, POSTS_REQUIRED_COLUMNS)
         },
         {
             "date": hn_date,
             "platform": "HackerNews",
             "dataset": "users",
-            "quality_score_percent": _calculate_score(hn_users, hn_date)
+            "quality_score_percent": _calculate_score(hn_users, hn_date, USERS_REQUIRED_COLUMNS)
         },
         {
             "date": x_date,
             "platform": "X",
             "dataset": "posts",
-            "quality_score_percent": _calculate_score(x_posts, x_date)
+            "quality_score_percent": _calculate_score(x_posts, x_date, POSTS_REQUIRED_COLUMNS)
         },
         {
             "date": x_date,
             "platform": "X",
             "dataset": "users",
-            "quality_score_percent": _calculate_score(x_users, x_date)
+            "quality_score_percent": _calculate_score(x_users, x_date, USERS_REQUIRED_COLUMNS)
         }
     ]
 
