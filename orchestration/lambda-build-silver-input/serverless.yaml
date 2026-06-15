@@ -1,0 +1,24 @@
+service: build-silver-input
+
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: eu-central-1
+  stage: dev
+  architecture: x86_64
+  timeout: 30
+  memorySize: 256
+
+package:
+  individually: true
+  patterns:
+    - '!**'
+    - 'src/**'
+
+functions:
+  buildSilverInput:
+    name: build-silver-input
+    handler: src.handler.lambda_handler

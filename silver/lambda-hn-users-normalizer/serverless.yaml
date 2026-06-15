@@ -1,4 +1,4 @@
-service: bronze-hackernews
+service: silver-hn-users-normalizer
 
 frameworkVersion: '3'
 configValidationMode: error
@@ -13,34 +13,42 @@ provider:
   stage: dev
   architecture: x86_64
   timeout: 120
-  memorySize: 512
+  memorySize: 1024
+  layers:
+    - arn:aws:lambda:eu-central-1:336392948345:layer:AWSSDKPandas-Python311:19
   environment:
-    BUCKET_NAME: ftn-social-data-pipeline-2026
+    DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
   iam:
     role:
       statements:
         - Effect: Allow
           Action:
-            - s3:PutObject
+            - s3:GetObject
           Resource:
             - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/hackernews/*
         - Effect: Allow
           Action:
-            - logs:CreateLogGroup
-            - logs:CreateLogStream
-            - logs:PutLogEvents
-          Resource: "*"
+            - s3:PutObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/silver/users/*
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026
   vpc:
     securityGroupIds:
       - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
     subnetIds:
       - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
       - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
+
 package:
   individually: true
   patterns:
     - '!**'
     - 'src/**'
+    - '../shared/**'
 
 custom:
   pythonRequirements:
@@ -48,6 +56,6 @@ custom:
     slim: true
 
 functions:
-  bronzeHackerNews:
-    name: bronze-hackernews-ingestion
+  hnUsersNormalizer:
+    name: silver-hn-users-normalizer
     handler: src.handler.lambda_handler

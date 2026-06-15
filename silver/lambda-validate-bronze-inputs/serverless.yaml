@@ -1,10 +1,7 @@
-service: bronze-hackernews
+service: silver-validate-bronze-inputs
 
 frameworkVersion: '3'
 configValidationMode: error
-
-plugins:
-  - serverless-python-requirements
 
 provider:
   name: aws
@@ -12,42 +9,38 @@ provider:
   region: eu-central-1
   stage: dev
   architecture: x86_64
-  timeout: 120
-  memorySize: 512
+  timeout: 60
+  memorySize: 256
   environment:
-    BUCKET_NAME: ftn-social-data-pipeline-2026
+    DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
   iam:
     role:
       statements:
         - Effect: Allow
           Action:
-            - s3:PutObject
+            - s3:GetObject
           Resource:
             - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/hackernews/*
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/bronze/x/*
         - Effect: Allow
           Action:
-            - logs:CreateLogGroup
-            - logs:CreateLogStream
-            - logs:PutLogEvents
-          Resource: "*"
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026
   vpc:
     securityGroupIds:
       - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
     subnetIds:
       - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
       - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
+
 package:
   individually: true
   patterns:
     - '!**'
     - 'src/**'
 
-custom:
-  pythonRequirements:
-    dockerizePip: false
-    slim: true
-
 functions:
-  bronzeHackerNews:
-    name: bronze-hackernews-ingestion
+  validateBronzeInputs:
+    name: silver-validate-bronze-inputs
     handler: src.handler.lambda_handler

@@ -1,0 +1,103 @@
+service: data-pipeline-workflow
+
+frameworkVersion: '3'
+configValidationMode: error
+
+plugins:
+  - serverless-step-functions
+
+provider:
+  name: aws
+  region: eu-central-1
+  stage: dev
+
+stepFunctions:
+  stateMachines:
+    dataPipelineWorkflow:
+      name: data-pipeline-workflow
+      events:
+        - schedule:
+            method: scheduler
+            rate: cron(00 22 * * ? *)
+            timezone: Europe/Belgrade
+            enabled: true
+            input: {}
+      definition:
+        Comment: "Main data pipeline workflow"
+        StartAt: RunBronzeInParallel
+        States:
+          RunBronzeInParallel:
+            Type: Parallel
+            Branches:
+              - StartAt: RunBronzeHn
+                States:
+                  RunBronzeHn:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:bronze-hackernews-ingestion
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+              - StartAt: RunBronzeX
+                States:
+                  RunBronzeX:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:bronze-x-ingestion
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+            ResultPath: $.bronze_results
+            Next: BuildSilverInput
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: WorkflowFailed
+
+          BuildSilverInput:
+            Type: Task
+            Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:build-silver-input
+            Next: RunSilverWorkflow
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 2
+                MaxAttempts: 2
+                BackoffRate: 2.0
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: WorkflowFailed
+
+          RunSilverWorkflow:
+            Type: Task
+            Resource: arn:aws:states:::states:startExecution.sync:2
+            Parameters:
+              StateMachineArn: arn:aws:states:eu-central-1:${aws:accountId}:stateMachine:silver-normalization-workflow
+              Input:
+                bucket_name.$: $.bucket_name
+                hn_bronze_key.$: $.hn_bronze_key
+                hn_date.$: $.hn_date
+                x_bronze_key.$: $.x_bronze_key
+                x_date.$: $.x_date
+            Next: WorkflowSucceeded
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: WorkflowFailed
+
+          WorkflowSucceeded:
+            Type: Succeed
+
+          WorkflowFailed:
+            Type: Fail
+            Error: DataPipelineFailed
+            Cause: Main data pipeline workflow failed.

@@ -1,0 +1,116 @@
+service: silver-normalization-workflow
+
+frameworkVersion: '3'
+configValidationMode: error
+
+plugins:
+  - serverless-step-functions
+
+provider:
+  name: aws
+  region: eu-central-1
+  stage: dev
+
+stepFunctions:
+  stateMachines:
+    silverNormalizationWorkflow:
+      name: silver-normalization-workflow
+      definition:
+        Comment: "Silver layer normalization workflow"
+        StartAt: ValidateBronzeInputs
+        States:
+          ValidateBronzeInputs:
+            Type: Task
+            Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-validate-bronze-inputs
+            Next: ParallelNormalize
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 2
+                MaxAttempts: 2
+                BackoffRate: 2.0
+
+          ParallelNormalize:
+            Type: Parallel
+            Branches:
+              - StartAt: NormalizeHnPosts
+                States:
+                  NormalizeHnPosts:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-hn-posts-normalizer
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+              - StartAt: NormalizeHnUsers
+                States:
+                  NormalizeHnUsers:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-hn-users-normalizer
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+              - StartAt: NormalizeXPosts
+                States:
+                  NormalizeXPosts:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-x-posts-normalizer
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+              - StartAt: NormalizeXUsers
+                States:
+                  NormalizeXUsers:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-x-users-normalizer
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+            ResultPath: $.normalization_results
+            Next: QualityChecks
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: WorkflowFailed
+
+          QualityChecks:
+            Type: Task
+            Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:silver-quality-checks
+            Next: WorkflowSucceeded
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 2
+                MaxAttempts: 2
+                BackoffRate: 2.0
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: WorkflowFailed
+
+          WorkflowSucceeded:
+            Type: Succeed
+
+          WorkflowFailed:
+            Type: Fail
+            Error: SilverNormalizationFailed
+            Cause: Silver normalization workflow failed.
