@@ -73,6 +73,19 @@ stepFunctions:
                         MaxAttempts: 2
                         BackoffRate: 2.0
 
+              - StartAt: CalculateDataQuality
+                States:
+                  CalculateDataQuality:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:gold-data-quality-kpi
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
             ResultPath: $.gold_results
             Next: WorkflowSucceeded
             Catch:
