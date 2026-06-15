@@ -11,7 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "serverless": "^4.37.0",
+    "serverless": "^3.40.0",
     "serverless-step-functions": "^3.30.0"
   }
 }
