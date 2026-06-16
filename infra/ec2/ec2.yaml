@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: EC2 Instance for hosting PostgreSQL and Apache Superset within the project VPC.
+
+Parameters:
+  DbPassword:
+    Type: String
+    NoEcho: true
+    Description: Secure password for PostgreSQL and Apache Superset.
+
+Resources:
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Apache Superset and PostgreSQL
+      VpcId:
+        Fn::ImportValue: "infra-vpc-dev-VpcId"
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8088
+          ToPort: 8088
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId:
+            Fn::ImportValue: "infra-vpc-dev-LambdaSecurityGroupId"
+
+  VisualizationInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.medium
+
+      ImageId: ami-0a2363a9cff180a63
+
+      SubnetId:
+        Fn::ImportValue: "infra-vpc-dev-PublicSubnetA"
+
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: ftn-visualization-station
+
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            set -e
+
+            apt-get update -y
+            apt-get install -y docker.io docker-compose curl
+
+            systemctl start docker
+            systemctl enable docker
+
+            mkdir -p /home/ubuntu/dashboard
+
+            cat > /home/ubuntu/dashboard/docker-compose.yml <<EOF
+            version: '3.8'
+
+            services:
+
+              postgres:
+                image: postgres:16
+                container_name: pipeline_postgres
+
+                environment:
+                  POSTGRES_USER: pipeline_user
+                  POSTGRES_PASSWORD: "${DbPassword}"
+                  POSTGRES_DB: social_metrics
+
+                ports:
+                  - "5432:5432"
+
+                volumes:
+                  - pgdata:/var/lib/postgresql/data
+
+                restart: unless-stopped
+
+              superset:
+                image: apache/superset:latest
+                container_name: pipeline_superset
+
+                ports:
+                  - "8088:8088"
+
+                environment:
+                  SUPERSET_SECRET_KEY: "social-data-platform-superset-secret"
+
+                depends_on:
+                  - postgres
+
+                restart: unless-stopped
+
+            volumes:
+              pgdata:
+
+            EOF
+
+            cd /home/ubuntu/dashboard
+
+            docker-compose up -d
+
+            echo "Waiting for Superset startup..."
+
+            timeout 300 bash -c '
+            until curl -s http://localhost:8088/health > /dev/null; do
+              sleep 5
+            done
+            '
+
+            echo "Initializing Superset..."
+
+            docker exec pipeline_superset superset db upgrade
+
+            docker exec pipeline_superset superset fab create-admin \
+              --username admin \
+              --firstname Admin \
+              --lastname User \
+              --email admin@example.com \
+              --password "${DbPassword}" || true
+
+            docker exec pipeline_superset superset init
+
+            echo "Superset initialization completed."
+
+Outputs:
+
+  PrivateIP:
+    Description: Private IP address of the instance
+    Value: !GetAtt VisualizationInstance.PrivateIp
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateIP"
+
+  PublicDNS:
+    Description: Public DNS name of the visualization instance
+    Value: !GetAtt VisualizationInstance.PublicDnsName
