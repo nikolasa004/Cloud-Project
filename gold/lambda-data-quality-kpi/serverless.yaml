@@ -1,4 +1,4 @@
-service: gold-daily-users
+service: gold-data-quality-kpi
 
 frameworkVersion: '3'
 configValidationMode: error
@@ -22,13 +22,14 @@ provider:
           Action:
             - s3:GetObject
           Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/silver/posts/*
             - arn:aws:s3:::ftn-social-data-pipeline-2026/silver/users/*
         - Effect: Allow
           Action:
             - s3:PutObject
             - s3:DeleteObject
           Resource:
-            - arn:aws:s3:::ftn-social-data-pipeline-2026/gold/daily_users_metric/*
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/gold/data_quality_kpi/*
         - Effect: Allow
           Action:
             - s3:ListBucket
@@ -48,6 +49,6 @@ package:
     - 'src/**'
 
 functions:
-  calculateDailyUsers:
-    name: gold-daily-users
+  calculateDataQuality:
+    name: gold-data-quality-kpi
     handler: src.handler.lambda_handler

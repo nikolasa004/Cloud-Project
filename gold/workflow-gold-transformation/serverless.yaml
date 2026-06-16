@@ -1,0 +1,102 @@
+service: gold-transformation-workflow
+
+frameworkVersion: '3'
+configValidationMode: error
+
+plugins:
+  - serverless-step-functions
+
+provider:
+  name: aws
+  region: eu-central-1
+  stage: dev
+
+stepFunctions:
+  stateMachines:
+    goldTransformationWorkflow:
+      name: gold-transformation-workflow
+      definition:
+        StartAt: ParallelGoldTransformations
+        States:
+          ParallelGoldTransformations:
+            Type: Parallel
+            Branches:
+              - StartAt: CalculateDailyActivity
+                States:
+                  CalculateDailyActivity:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:gold-daily-activity
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+              - StartAt: CalculateDailyUsers
+                States:
+                  CalculateDailyUsers:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:gold-daily-users
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+              - StartAt: CalculateTopAuthors
+                States:
+                  CalculateTopAuthors:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:gold-top-authors
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+              - StartAt: CalculateTopPosts
+                States:
+                  CalculateTopPosts:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:gold-top-posts
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+              - StartAt: CalculateDataQuality
+                States:
+                  CalculateDataQuality:
+                    Type: Task
+                    Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:gold-data-quality-kpi
+                    End: true
+                    Retry:
+                      - ErrorEquals:
+                          - States.ALL
+                        IntervalSeconds: 2
+                        MaxAttempts: 2
+                        BackoffRate: 2.0
+
+            ResultPath: $.gold_results
+            Next: WorkflowSucceeded
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: WorkflowFailed
+
+          WorkflowSucceeded:
+            Type: Succeed
+
+          WorkflowFailed:
+            Type: Fail
+            Error: GoldTransformationFailed
+            Cause: Gold transformation workflow failed.
