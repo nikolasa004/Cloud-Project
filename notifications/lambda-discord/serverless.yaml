@@ -1,0 +1,85 @@
+service: lambda-discord-notifier
+
+frameworkVersion: '3'
+configValidationMode: error
+
+plugins:
+  - serverless-python-requirements
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: eu-central-1
+  stage: dev
+  architecture: x86_64
+  timeout: 30
+  memorySize: 256
+
+  environment:
+    DISCORD_WEBHOOK: "https://discord.com/api/webhooks/1522207370468524173/oQ80l879DPZZscbHc70cwhKudwbVMbtyPy4YldG9zvU04cX18sgq78BKWI4rOiT8fOGT"
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+
+package:
+  individually: true
+  patterns:
+    - '!**'
+    - 'src/**'
+    - 'requirements.txt'
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    useStaticCache: false
+    useDownloadCache: false
+
+functions:
+  discordNotifier:
+    name: lambda-discord-notifier
+    handler: src.handler.lambda_handler
+
+resources:
+  Resources:
+
+    PipelineFailuresTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: pipeline-failures
+
+    DiscordNotifierPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName:
+          Ref: DiscordNotifierLambdaFunction
+        Action: lambda:InvokeFunction
+        Principal: sns.amazonaws.com
+        SourceArn:
+          Ref: PipelineFailuresTopic
+
+    DiscordSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        TopicArn:
+          Ref: PipelineFailuresTopic
+        Protocol: lambda
+        Endpoint:
+          Fn::GetAtt:
+            - DiscordNotifierLambdaFunction
+            - Arn
+
+  Outputs:
+
+    PipelineFailuresTopicArn:
+      Description: SNS Topic ARN for pipeline failure notifications
+      Value:
+        Ref: PipelineFailuresTopic
+      Export:
+        Name: pipeline-failures-topic-arn
