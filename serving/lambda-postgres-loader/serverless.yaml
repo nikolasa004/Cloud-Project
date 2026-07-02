@@ -1,0 +1,64 @@
+service: postgres-loader
+
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: eu-central-1
+  stage: dev
+  architecture: x86_64
+
+  timeout: 120
+  memorySize: 1024
+
+  layers:
+    - arn:aws:lambda:eu-central-1:336392948345:layer:AWSSDKPandas-Python311:19
+
+  environment:
+    DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
+
+    DB_HOST:
+      Fn::ImportValue: visualization-ec2-dev-PrivateIP
+
+    DB_PORT: "5432"
+    DB_NAME: social_metrics
+    DB_USER: pipeline_user
+    DB_PASSWORD: ${env:POSTGRES_PASSWORD}
+
+  iam:
+    role:
+      statements:
+
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/gold/*
+
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::ftn-social-data-pipeline-2026
+
+package:
+  individually: true
+
+  patterns:
+    - '!**'
+    - 'src/**'
+
+functions:
+  postgresLoader:
+    name: postgres-loader
+    handler: src.handler.lambda_handler
+
+    vpc:
+      securityGroupIds:
+        - Fn::ImportValue: infra-vpc-dev-LambdaSecurityGroupId
+
+      subnetIds:
+        - Fn::ImportValue: infra-vpc-dev-PrivateSubnetA
+        - Fn::ImportValue: infra-vpc-dev-PrivateSubnetB

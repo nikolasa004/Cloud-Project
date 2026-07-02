@@ -1,23 +1,20 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: EC2 Instance for hosting PostgreSQL and Apache Superset within the project VPC.
-
-Parameters:
-  DbPassword:
-    Type: String
-    NoEcho: true
-    Description: Secure password for PostgreSQL and Apache Superset.
+Description: EC2 instance hosting PostgreSQL and Apache Superset.
 
 Resources:
 
   EC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
+
     Properties:
-      GroupDescription: Security group for Apache Superset and PostgreSQL
+      GroupDescription: PostgreSQL and Apache Superset
+
       VpcId:
-        Fn::ImportValue: "infra-vpc-dev-VpcId"
+        Fn::ImportValue: infra-vpc-dev-VpcId
 
       SecurityGroupIngress:
+
         - IpProtocol: tcp
           FromPort: 8088
           ToPort: 8088
@@ -27,17 +24,24 @@ Resources:
           FromPort: 5432
           ToPort: 5432
           SourceSecurityGroupId:
-            Fn::ImportValue: "infra-vpc-dev-LambdaSecurityGroupId"
+            Fn::ImportValue: infra-vpc-dev-LambdaSecurityGroupId
+
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
 
   VisualizationInstance:
     Type: AWS::EC2::Instance
-    Properties:
-      InstanceType: t3.medium
 
-      ImageId: ami-0a2363a9cff180a63
+    Properties:
+
+      InstanceType: t3.small
+
+      ImageId: ami-08ea642491f096f83
 
       SubnetId:
-        Fn::ImportValue: "infra-vpc-dev-PublicSubnetA"
+        Fn::ImportValue: infra-vpc-dev-PublicSubnetA
 
       SecurityGroupIds:
         - !Ref EC2SecurityGroup
@@ -47,96 +51,85 @@ Resources:
           Value: ftn-visualization-station
 
       UserData:
-        Fn::Base64:
-          !Sub |
-            #!/bin/bash
-            set -e
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -eux
 
-            apt-get update -y
-            apt-get install -y docker.io docker-compose curl
+          apt-get update -y
+          apt-get install -y docker.io docker-compose-v2 curl
 
-            systemctl start docker
-            systemctl enable docker
+          systemctl enable docker
+          systemctl start docker
 
-            mkdir -p /home/ubuntu/dashboard
+          usermod -aG docker ubuntu
 
-            cat > /home/ubuntu/dashboard/docker-compose.yml <<EOF
-            version: '3.8'
+          mkdir -p /home/ubuntu/dashboard
 
-            services:
+          cat > /home/ubuntu/dashboard/docker-compose.yml <<EOF
+          services:
 
-              postgres:
-                image: postgres:16
-                container_name: pipeline_postgres
+            postgres:
+              image: postgres:16.9
+              container_name: pipeline_postgres
+              restart: always
 
-                environment:
-                  POSTGRES_USER: pipeline_user
-                  POSTGRES_PASSWORD: "${DbPassword}"
-                  POSTGRES_DB: social_metrics
+              environment:
+                POSTGRES_USER: pipeline_user
+                POSTGRES_PASSWORD: CloudProject2026!
+                POSTGRES_DB: social_metrics
 
-                ports:
-                  - "5432:5432"
+              ports:
+                - "5432:5432"
 
-                volumes:
-                  - pgdata:/var/lib/postgresql/data
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
 
-                restart: unless-stopped
+              healthcheck:
+                test: ["CMD-SHELL","pg_isready -U pipeline_user -d social_metrics"]
+                interval: 10s
+                timeout: 5s
+                retries: 10
 
-              superset:
-                image: apache/superset:latest
-                container_name: pipeline_superset
+            superset:
+              image: apache/superset:4.1.1
+              container_name: pipeline_superset
+              restart: always
 
-                ports:
-                  - "8088:8088"
+              depends_on:
+                postgres:
+                  condition: service_healthy
 
-                environment:
-                  SUPERSET_SECRET_KEY: "social-data-platform-superset-secret"
+              environment:
+                SUPERSET_SECRET_KEY: social-data-platform-secret
 
-                depends_on:
-                  - postgres
+              ports:
+                - "8088:8088"
 
-                restart: unless-stopped
+          volumes:
+            postgres_data:
 
-            volumes:
-              pgdata:
+          EOF
 
-            EOF
+          cd /home/ubuntu/dashboard
 
-            cd /home/ubuntu/dashboard
-
-            docker-compose up -d
-
-            echo "Waiting for Superset startup..."
-
-            timeout 300 bash -c '
-            until curl -s http://localhost:8088/health > /dev/null; do
-              sleep 5
-            done
-            '
-
-            echo "Initializing Superset..."
-
-            docker exec pipeline_superset superset db upgrade
-
-            docker exec pipeline_superset superset fab create-admin \
-              --username admin \
-              --firstname Admin \
-              --lastname User \
-              --email admin@example.com \
-              --password "${DbPassword}" || true
-
-            docker exec pipeline_superset superset init
-
-            echo "Superset initialization completed."
+          docker compose up -d
 
 Outputs:
 
   PrivateIP:
-    Description: Private IP address of the instance
+    Description: EC2 private IP
     Value: !GetAtt VisualizationInstance.PrivateIp
     Export:
       Name: !Sub "${AWS::StackName}-PrivateIP"
 
+  PublicIP:
+    Description: EC2 public IP
+    Value: !GetAtt VisualizationInstance.PublicIp
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicIP"
+
   PublicDNS:
-    Description: Public DNS name of the visualization instance
+    Description: EC2 public DNS
     Value: !GetAtt VisualizationInstance.PublicDnsName
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicDNS"

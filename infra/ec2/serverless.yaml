@@ -8,10 +8,5 @@ provider:
   region: eu-central-1
   stage: dev
 
-custom:
-  postgresPassword: ${env:POSTGRES_PASSWORD}
-
 resources:
   - ${file(./ec2.yaml)}
-  - Parameters:
-      DbPassword: ${self:custom.postgresPassword}
