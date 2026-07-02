@@ -1,0 +1,12 @@
+service: visualization-ec2
+
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  region: eu-central-1
+  stage: dev
+
+resources:
+  - ${file(./ec2.yaml)}

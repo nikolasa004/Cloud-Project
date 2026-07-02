@@ -44,3 +44,29 @@ functions:
   validateBronzeInputs:
     name: silver-validate-bronze-inputs
     handler: src.handler.lambda_handler
+
+resources:
+  Resources:
+    ValidateBronzeInputsErrorsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: silver-validate-bronze-inputs-errors
+        AlarmDescription: Sends Discord notification whenever the validation Lambda execution fails.
+
+        Namespace: AWS/Lambda
+        MetricName: Errors
+
+        Dimensions:
+          - Name: FunctionName
+            Value: silver-validate-bronze-inputs
+
+        Statistic: Sum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 0
+
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+
+        AlarmActions:
+          - ${cf:lambda-discord-notifier-dev.PipelineFailuresTopicArn}

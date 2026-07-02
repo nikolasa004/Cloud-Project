@@ -51,3 +51,29 @@ functions:
   bronzeHackerNews:
     name: bronze-hackernews-ingestion
     handler: src.handler.lambda_handler
+
+resources:
+  Resources:
+    BronzeHackerNewsErrorsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: bronze-hackernews-ingestion-errors
+        AlarmDescription: Sends Discord notification whenever Bronze HackerNews ingestion Lambda fails.
+
+        Namespace: AWS/Lambda
+        MetricName: Errors
+
+        Dimensions:
+          - Name: FunctionName
+            Value: bronze-hackernews-ingestion
+
+        Statistic: Sum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 0
+
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+
+        AlarmActions:
+          - Fn::ImportValue: pipeline-failures-topic-arn

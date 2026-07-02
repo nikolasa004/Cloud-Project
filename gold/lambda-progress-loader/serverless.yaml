@@ -1,7 +1,10 @@
-service: silver-quality-checks
+service: lambda-progress-loader
 
 frameworkVersion: '3'
 configValidationMode: error
+
+plugins:
+  - serverless-python-requirements
 
 provider:
   name: aws
@@ -9,56 +12,71 @@ provider:
   region: eu-central-1
   stage: dev
   architecture: x86_64
-  timeout: 120
+  timeout: 300
   memorySize: 1024
+
   layers:
     - arn:aws:lambda:eu-central-1:336392948345:layer:AWSSDKPandas-Python311:19
+
   environment:
     DATA_LAKE_BUCKET: ftn-social-data-pipeline-2026
+
+    POSTGRES_HOST: "10.0.1.87"
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: "social_metrics"
+    POSTGRES_USER: "pipeline_user"
+    POSTGRES_PASSWORD: "CloudProject2026!"
+
   iam:
     role:
       statements:
+
         - Effect: Allow
           Action:
             - s3:GetObject
             - s3:ListBucket
           Resource:
             - arn:aws:s3:::ftn-social-data-pipeline-2026
-            - arn:aws:s3:::ftn-social-data-pipeline-2026/silver/posts/*
-            - arn:aws:s3:::ftn-social-data-pipeline-2026/silver/users/*
+            - arn:aws:s3:::ftn-social-data-pipeline-2026/*
+
   vpc:
     securityGroupIds:
-      - "Fn::ImportValue": "infra-vpc-dev-LambdaSecurityGroupId"
+     - Fn::ImportValue: infra-vpc-dev-LambdaSecurityGroupId
+
     subnetIds:
-      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetA"
-      - "Fn::ImportValue": "infra-vpc-dev-PrivateSubnetB"
+      - Fn::ImportValue: infra-vpc-dev-PrivateSubnetA
+      - Fn::ImportValue: infra-vpc-dev-PrivateSubnetB
 
 package:
   individually: true
   patterns:
     - '!**'
     - 'src/**'
-    - '../shared/**'
+    - 'requirements.txt'
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
 
 functions:
-  qualityChecks:
-    name: silver-quality-checks
+  progressLoader:
+    name: lambda-progress-loader
     handler: src.handler.lambda_handler
 
 resources:
   Resources:
-    QualityChecksErrorsAlarm:
+    ProgressLoaderErrorsAlarm:
       Type: AWS::CloudWatch::Alarm
       Properties:
-        AlarmName: silver-quality-checks-errors
-        AlarmDescription: Sends Discord notification whenever the Quality Checks Lambda execution fails.
+        AlarmName: lambda-progress-loader-errors
+        AlarmDescription: Sends Discord notification whenever Progress Loader Lambda fails.
 
         Namespace: AWS/Lambda
         MetricName: Errors
 
         Dimensions:
           - Name: FunctionName
-            Value: silver-quality-checks
+            Value: lambda-progress-loader
 
         Statistic: Sum
         Period: 60
@@ -69,4 +87,4 @@ resources:
         TreatMissingData: notBreaching
 
         AlarmActions:
-          - ${cf:lambda-discord-notifier-dev.PipelineFailuresTopicArn}
+          - Fn::ImportValue: pipeline-failures-topic-arn

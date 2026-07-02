@@ -51,3 +51,29 @@ functions:
   calculateTopAuthors:
     name: gold-top-authors
     handler: src.handler.lambda_handler
+
+resources:
+  Resources:
+    TopAuthorsErrorsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: gold-top-authors-errors
+        AlarmDescription: Sends Discord notification whenever the Top Authors Lambda execution fails.
+
+        Namespace: AWS/Lambda
+        MetricName: Errors
+
+        Dimensions:
+          - Name: FunctionName
+            Value: gold-top-authors
+
+        Statistic: Sum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 0
+
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+
+        AlarmActions:
+          - ${cf:lambda-discord-notifier-dev.PipelineFailuresTopicArn}

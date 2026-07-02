@@ -1,0 +1,135 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: EC2 instance hosting PostgreSQL and Apache Superset.
+
+Resources:
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+
+    Properties:
+      GroupDescription: PostgreSQL and Apache Superset
+
+      VpcId:
+        Fn::ImportValue: infra-vpc-dev-VpcId
+
+      SecurityGroupIngress:
+
+        - IpProtocol: tcp
+          FromPort: 8088
+          ToPort: 8088
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId:
+            Fn::ImportValue: infra-vpc-dev-LambdaSecurityGroupId
+
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  VisualizationInstance:
+    Type: AWS::EC2::Instance
+
+    Properties:
+
+      InstanceType: t3.small
+
+      ImageId: ami-08ea642491f096f83
+
+      SubnetId:
+        Fn::ImportValue: infra-vpc-dev-PublicSubnetA
+
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: ftn-visualization-station
+
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -eux
+
+          apt-get update -y
+          apt-get install -y docker.io docker-compose-v2 curl
+
+          systemctl enable docker
+          systemctl start docker
+
+          usermod -aG docker ubuntu
+
+          mkdir -p /home/ubuntu/dashboard
+
+          cat > /home/ubuntu/dashboard/docker-compose.yml <<EOF
+          services:
+
+            postgres:
+              image: postgres:16.9
+              container_name: pipeline_postgres
+              restart: always
+
+              environment:
+                POSTGRES_USER: pipeline_user
+                POSTGRES_PASSWORD: CloudProject2026!
+                POSTGRES_DB: social_metrics
+
+              ports:
+                - "5432:5432"
+
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+
+              healthcheck:
+                test: ["CMD-SHELL","pg_isready -U pipeline_user -d social_metrics"]
+                interval: 10s
+                timeout: 5s
+                retries: 10
+
+            superset:
+              image: apache/superset:4.1.1
+              container_name: pipeline_superset
+              restart: always
+
+              depends_on:
+                postgres:
+                  condition: service_healthy
+
+              environment:
+                SUPERSET_SECRET_KEY: social-data-platform-secret
+
+              ports:
+                - "8088:8088"
+
+          volumes:
+            postgres_data:
+
+          EOF
+
+          cd /home/ubuntu/dashboard
+
+          docker compose up -d
+
+Outputs:
+
+  PrivateIP:
+    Description: EC2 private IP
+    Value: !GetAtt VisualizationInstance.PrivateIp
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateIP"
+
+  PublicIP:
+    Description: EC2 public IP
+    Value: !GetAtt VisualizationInstance.PublicIp
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicIP"
+
+  PublicDNS:
+    Description: EC2 public DNS
+    Value: !GetAtt VisualizationInstance.PublicDnsName
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicDNS"
