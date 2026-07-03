@@ -87,10 +87,7 @@ stepFunctions:
                         BackoffRate: 2.0
 
             ResultPath: $.gold_results
-            Next: WorkflowSucceeded
-
             Next: LoadServingLayer
-
             Catch:
               - ErrorEquals:
                   - States.ALL
@@ -98,21 +95,17 @@ stepFunctions:
 
           LoadServingLayer:
             Type: Task
-
-            Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:postgres-loader
-
+            Resource: arn:aws:lambda:eu-central-1:${aws:accountId}:function:lambda-progress-loader
             Retry:
               - ErrorEquals:
                   - States.ALL
                 IntervalSeconds: 2
                 MaxAttempts: 2
                 BackoffRate: 2.0
-
             Catch:
               - ErrorEquals:
                   - States.ALL
                 Next: WorkflowFailed
-
             Next: WorkflowSucceeded
 
           WorkflowSucceeded:
