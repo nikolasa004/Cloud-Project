@@ -139,7 +139,6 @@ The Discord notification function is triggered by SNS messages and formats AWS a
 ├── infra/            # S3, VPC, and EC2 infrastructure definitions
 ├── notifications/    # SNS-to-Discord notification Lambda
 ├── serving/          # Apache Superset setup resources
-├── docs/             # Architecture, data flow, and AWS setup notes
 └── README.md
 ```
 
